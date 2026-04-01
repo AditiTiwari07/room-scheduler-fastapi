@@ -4,13 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Room Scheduler</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link type="text/css" rel="stylesheet" href="{{ url_for('static', path='/style.css') }}"/>
+    <script type="module" src="{{ url_for('static', path='/firebase-login.js') }}"></script>
 </head>
 <body>
     <nav>
         <h1>Room Scheduler</h1>
     </nav>
     <div class="container">
+        <div id="login-box" hidden="true">
+            Email:<input type="text" name="" id="email"/><br/>
+            Password:<input type="password" name="" id="password"/>
+            <button id="login">Login</button>
+            <button id="sign-up">Sign Up</button>
+        </div>
+        <button id="sign-out" hidden="true">Sign out</button>
+
+        {% if user_token %}
+            <p>User email: {{ user_token.email }}</p>
+        {% endif %}
+
         {% block content %}{% endblock %}
     </div>
 </body>
