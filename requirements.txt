@@ -1,0 +1,5 @@
+flask
+flask-pymongo
+pymongo
+firebase-admin
+python-dotenv 
