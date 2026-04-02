@@ -292,3 +292,23 @@ async def filterBookings(request: Request):
         'bookings': bookings,
         'filtered_bookings': filtered_bookings
     })
+@app.get('/room/{room_name}', response_class=HTMLResponse)
+async def viewRoom(request: Request, room_name: str):
+    id_token = request.cookies.get('token')
+    user_token = validateFirebaseToken(id_token)
+    if not user_token:
+        return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
+
+    # get all bookings for this room sorted by date and time
+    bookings = []
+    for booking in booking_collection.find({'room_name': room_name}):
+        bookings.append(booking)
+
+    bookings.sort(key=lambda x: (x['date'], x['start_time']))
+
+    return templates.TemplateResponse('room.html', {
+        'request': request,
+        'user_token': user_token,
+        'room_name': room_name,
+        'bookings': bookings
+    })

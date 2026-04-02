@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+{% if user_token %}
+<h2>Room: {{ room_name }}</h2>
+
+<h3>All Bookings for this Room</h3>
+{% if bookings %}
+    {% for booking in bookings %}
+        <p>{{ booking['date'] }} - {{ booking['start_time'] }} to {{ booking['end_time'] }} - {{ booking['user_email'] }}</p>
+    {% endfor %}
+{% else %}
+    <p>No bookings for this room yet.</p>
+{% endif %}
+
+<a href="/">Back to Home</a>
+
+{% else %}
+<p>Please login to view room details.</p>
+{% endif %}
+
+{% endblock %}
