@@ -35,7 +35,12 @@
 <h2>My Bookings</h2>
 {% if bookings %}
     {% for booking in bookings %}
-        <p>{{ booking['room_name'] }} - {{ booking['date'] }} - {{ booking['start_time'] }} to {{ booking['end_time'] }}</p>
+        <p>{{ booking['room_name'] }} - {{ booking['date'] }} - {{ booking['start_time'] }} to {{ booking['end_time'] }}
+        <form action="/delete-booking" method="post" style="display:inline">
+            <input type="hidden" name="booking_id" value="{{ booking['_id'] }}"/>
+            <input type="submit" value="Delete"/>
+        </form>
+        </p>
     {% endfor %}
 {% else %}
     <p>No bookings yet.</p>

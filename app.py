@@ -6,6 +6,7 @@ import google.oauth2.id_token
 from google.auth.transport import requests
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
+from bson import ObjectId
 import starlette.status as status
 import os
 from dotenv import load_dotenv
@@ -90,12 +91,12 @@ async def addRoom(request: Request):
     form = await request.form()
     room_name = form['room_name']
 
-    # check if room exists
+    # check if room already exists
     existing_room = room_collection.find_one({'name': room_name})
     if existing_room:
         return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
 
-    # add room 
+    # add room to database
     room_collection.insert_one({
         'name': room_name,
         'created_by': user_token['email'],
@@ -131,7 +132,7 @@ async def addBooking(request: Request):
         if not (end_time <= existing_start or start_time >= existing_end):
             return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
 
-    # add booking 
+    # add booking to database
     booking_collection.insert_one({
         'room_name': room_name,
         'date': date,
@@ -143,3 +144,23 @@ async def addBooking(request: Request):
     return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
 
 
+@app.post('/delete-booking', response_class=RedirectResponse)
+async def deleteBooking(request: Request):
+    id_token = request.cookies.get('token')
+    user_token = validateFirebaseToken(id_token)
+    if not user_token:
+        return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
+
+    form = await request.form()
+    booking_id = form['booking_id']
+
+    # only delete if this booking belongs to the current user
+    booking = booking_collection.find_one({
+        '_id': ObjectId(booking_id),
+        'user_email': user_token['email']
+    })
+
+    if booking:
+        booking_collection.delete_one({'_id': ObjectId(booking_id)})
+
+    return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
