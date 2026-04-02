@@ -3,6 +3,7 @@
 {% block content %}
 
 {% if user_token %}
+
 <h2>Add a New Room</h2>
 <form action="/add-room" method="post">
     <input type="text" name="room_name" placeholder="Enter room name" required/>
@@ -16,6 +17,28 @@
     {% endfor %}
 {% else %}
     <p>No rooms available yet.</p>
+{% endif %}
+
+<h2>Book a Room</h2>
+<form action="/add-booking" method="post">
+    <select name="room_name" required>
+        {% for room in rooms %}
+            <option value="{{ room['name'] }}">{{ room['name'] }}</option>
+        {% endfor %}
+    </select>
+    <input type="date" name="date" required/>
+    <input type="time" name="start_time" required/>
+    <input type="time" name="end_time" required/>
+    <input type="submit" value="Book Room"/>
+</form>
+
+<h2>My Bookings</h2>
+{% if bookings %}
+    {% for booking in bookings %}
+        <p>{{ booking['room_name'] }} - {{ booking['date'] }} - {{ booking['start_time'] }} to {{ booking['end_time'] }}</p>
+    {% endfor %}
+{% else %}
+    <p>No bookings yet.</p>
 {% endif %}
 
 {% else %}

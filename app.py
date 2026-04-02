@@ -16,7 +16,7 @@ load_dotenv()
 uri = os.getenv("MONGO_URI")
 client = MongoClient(uri, server_api=ServerApi('1'))
 
-# confirm connection
+# Ping to confirm connection
 try:
     client.admin.command('ping')
     print("Successfully connected to MongoDB!")
@@ -26,7 +26,7 @@ except Exception as e:
 # Define the app
 app = FastAPI()
 
-# Open db and collections
+# Open database and collections
 db = client['A1-3195197']
 room_collection = db['rooms']
 day_collection = db['days']
@@ -65,11 +65,18 @@ async def root(request: Request):
     for room in room_collection.find():
         rooms.append(room)
 
+    # get all bookings for current user
+    bookings = []
+    if user_token:
+        for booking in booking_collection.find({'user_email': user_token['email']}):
+            bookings.append(booking)
+
     return templates.TemplateResponse('index.html', {
         'request': request,
         'user_token': user_token,
         'error_message': error_message,
-        'rooms': rooms
+        'rooms': rooms,
+        'bookings': bookings
     })
 
 
@@ -88,7 +95,7 @@ async def addRoom(request: Request):
     if existing_room:
         return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
 
-    # add room to db
+    # add room 
     room_collection.insert_one({
         'name': room_name,
         'created_by': user_token['email'],
@@ -96,3 +103,43 @@ async def addRoom(request: Request):
     })
 
     return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
+
+
+@app.post('/add-booking', response_class=RedirectResponse)
+async def addBooking(request: Request):
+    id_token = request.cookies.get('token')
+    user_token = validateFirebaseToken(id_token)
+    if not user_token:
+        return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
+
+    form = await request.form()
+    room_name = form['room_name']
+    date = form['date']
+    start_time = form['start_time']
+    end_time = form['end_time']
+
+    # check for clashing bookings
+    existing_bookings = booking_collection.find({
+        'room_name': room_name,
+        'date': date
+    })
+
+    for existing in existing_bookings:
+        existing_start = existing['start_time']
+        existing_end = existing['end_time']
+        # check if times overlap
+        if not (end_time <= existing_start or start_time >= existing_end):
+            return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
+
+    # add booking 
+    booking_collection.insert_one({
+        'room_name': room_name,
+        'date': date,
+        'start_time': start_time,
+        'end_time': end_time,
+        'user_email': user_token['email']
+    })
+
+    return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
+
+
