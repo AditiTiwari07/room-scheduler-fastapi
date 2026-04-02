@@ -13,7 +13,14 @@
 <h2>Available Rooms</h2>
 {% if rooms %}
     {% for room in rooms %}
-        <p>{{ room['name'] }}</p>
+        <p>{{ room['name'] }}
+        {% if room['created_by'] == user_token.email %}
+        <form action="/delete-room" method="post" style="display:inline">
+            <input type="hidden" name="room_name" value="{{ room['name'] }}"/>
+            <input type="submit" value="Delete Room"/>
+        </form>
+        {% endif %}
+        </p>
     {% endfor %}
 {% else %}
     <p>No rooms available yet.</p>

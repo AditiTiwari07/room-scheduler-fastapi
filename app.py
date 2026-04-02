@@ -228,3 +228,31 @@ async def editBookingPost(request: Request, booking_id: str):
     )
 
     return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
+@app.post('/delete-room', response_class=RedirectResponse)
+async def deleteRoom(request: Request):
+    id_token = request.cookies.get('token')
+    user_token = validateFirebaseToken(id_token)
+    if not user_token:
+        return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
+
+    form = await request.form()
+    room_name = form['room_name']
+
+    # check if room was created by this user
+    room = room_collection.find_one({
+        'name': room_name,
+        'created_by': user_token['email']
+    })
+
+    if not room:
+        return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
+
+    # check if room has any bookings
+    existing_bookings = booking_collection.find_one({'room_name': room_name})
+    if existing_bookings:
+        return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
+
+    # delete the room
+    room_collection.delete_one({'name': room_name})
+
+    return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
