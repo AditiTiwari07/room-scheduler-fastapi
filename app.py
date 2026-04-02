@@ -256,3 +256,39 @@ async def deleteRoom(request: Request):
     room_collection.delete_one({'name': room_name})
 
     return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
+@app.post('/filter-bookings', response_class=HTMLResponse)
+async def filterBookings(request: Request):
+    id_token = request.cookies.get('token')
+    user_token = validateFirebaseToken(id_token)
+    if not user_token:
+        return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
+
+    form = await request.form()
+    date = form['date']
+
+    # get all rooms
+    rooms = []
+    for room in room_collection.find():
+        rooms.append(room)
+
+    # get all bookings for current user
+    bookings = []
+    for booking in booking_collection.find({'user_email': user_token['email']}):
+        bookings.append(booking)
+
+    # get all bookings for that day across all rooms
+    filtered_bookings = []
+    for booking in booking_collection.find({'date': date}):
+        filtered_bookings.append(booking)
+
+    # sort by start time
+    filtered_bookings.sort(key=lambda x: x['start_time'])
+
+    return templates.TemplateResponse('index.html', {
+        'request': request,
+        'user_token': user_token,
+        'error_message': 'No error here',
+        'rooms': rooms,
+        'bookings': bookings,
+        'filtered_bookings': filtered_bookings
+    })

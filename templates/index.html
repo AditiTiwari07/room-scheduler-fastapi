@@ -54,6 +54,22 @@
     <p>No bookings yet.</p>
 {% endif %}
 
+<h2>Filter Bookings by Day</h2>
+<form action="/filter-bookings" method="post">
+    <input type="date" name="date" required/>
+    <input type="submit" value="Filter"/>
+</form>
+
+{% if filtered_bookings is defined %}
+{% if filtered_bookings %}
+    {% for booking in filtered_bookings %}
+        <p>{{ booking['room_name'] }} - {{ booking['start_time'] }} to {{ booking['end_time'] }} - {{ booking['user_email'] }}</p>
+    {% endfor %}
+{% else %}
+    <p>No bookings found for that day.</p>
+{% endif %}
+{% endif %}
+
 {% else %}
 <h2>Welcome to Room Scheduler</h2>
 <p>Please login to manage rooms and bookings.</p>
