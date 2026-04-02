@@ -1,7 +1,26 @@
 {% extends "base.html" %}
 
 {% block content %}
+
+{% if user_token %}
+<h2>Add a New Room</h2>
+<form action="/add-room" method="post">
+    <input type="text" name="room_name" placeholder="Enter room name" required/>
+    <input type="submit" value="Add Room"/>
+</form>
+
+<h2>Available Rooms</h2>
+{% if rooms %}
+    {% for room in rooms %}
+        <p>{{ room['name'] }}</p>
+    {% endfor %}
+{% else %}
+    <p>No rooms available yet.</p>
+{% endif %}
+
+{% else %}
 <h2>Welcome to Room Scheduler</h2>
-<p>Use this system to book and manage rooms.</p>
-<a href="/rooms">View Rooms</a>
+<p>Please login to manage rooms and bookings.</p>
+{% endif %}
+
 {% endblock %}
