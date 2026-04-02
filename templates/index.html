@@ -40,6 +40,7 @@
             <input type="hidden" name="booking_id" value="{{ booking['_id'] }}"/>
             <input type="submit" value="Delete"/>
         </form>
+        <a href="/edit-booking/{{ booking['_id'] }}">Edit</a>
         </p>
     {% endfor %}
 {% else %}

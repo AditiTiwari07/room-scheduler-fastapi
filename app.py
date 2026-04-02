@@ -128,7 +128,6 @@ async def addBooking(request: Request):
     for existing in existing_bookings:
         existing_start = existing['start_time']
         existing_end = existing['end_time']
-        # check if times overlap
         if not (end_time <= existing_start or start_time >= existing_end):
             return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
 
@@ -162,5 +161,70 @@ async def deleteBooking(request: Request):
 
     if booking:
         booking_collection.delete_one({'_id': ObjectId(booking_id)})
+
+    return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
+
+
+@app.get('/edit-booking/{booking_id}', response_class=HTMLResponse)
+async def editBooking(request: Request, booking_id: str):
+    id_token = request.cookies.get('token')
+    user_token = validateFirebaseToken(id_token)
+    if not user_token:
+        return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
+
+    # get the booking
+    booking = booking_collection.find_one({
+        '_id': ObjectId(booking_id),
+        'user_email': user_token['email']
+    })
+
+    if not booking:
+        return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
+
+    return templates.TemplateResponse('edit_booking.html', {
+        'request': request,
+        'user_token': user_token,
+        'booking': booking
+    })
+
+
+@app.post('/edit-booking/{booking_id}', response_class=RedirectResponse)
+async def editBookingPost(request: Request, booking_id: str):
+    id_token = request.cookies.get('token')
+    user_token = validateFirebaseToken(id_token)
+    if not user_token:
+        return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
+
+    form = await request.form()
+    date = form['date']
+    start_time = form['start_time']
+    end_time = form['end_time']
+
+    # get current booking to know the room name
+    booking = booking_collection.find_one({'_id': ObjectId(booking_id)})
+    room_name = booking['room_name']
+
+    # check for clashing bookings excluding current booking
+    existing_bookings = booking_collection.find({
+        'room_name': room_name,
+        'date': date,
+        '_id': {'$ne': ObjectId(booking_id)}
+    })
+
+    for existing in existing_bookings:
+        existing_start = existing['start_time']
+        existing_end = existing['end_time']
+        if not (end_time <= existing_start or start_time >= existing_end):
+            return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
+
+    # update the booking
+    booking_collection.update_one(
+        {'_id': ObjectId(booking_id)},
+        {'$set': {
+            'date': date,
+            'start_time': start_time,
+            'end_time': end_time
+        }}
+    )
 
     return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
