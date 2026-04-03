@@ -303,12 +303,21 @@ async def viewRoom(request: Request, room_name: str):
     bookings = []
     for booking in booking_collection.find({'room_name': room_name}):
         bookings.append(booking)
-
     bookings.sort(key=lambda x: (x['date'], x['start_time']))
+
+    # get bookings for this room by current user
+    my_bookings = []
+    for booking in booking_collection.find({
+        'room_name': room_name,
+        'user_email': user_token['email']
+    }):
+        my_bookings.append(booking)
+    my_bookings.sort(key=lambda x: (x['date'], x['start_time']))
 
     return templates.TemplateResponse('room.html', {
         'request': request,
         'user_token': user_token,
         'room_name': room_name,
-        'bookings': bookings
+        'bookings': bookings,
+        'my_bookings': my_bookings
     })

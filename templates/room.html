@@ -14,6 +14,15 @@
     <p>No bookings for this room yet.</p>
 {% endif %}
 
+<h3>My Bookings for this Room</h3>
+{% if my_bookings %}
+    {% for booking in my_bookings %}
+        <p>{{ booking['date'] }} - {{ booking['start_time'] }} to {{ booking['end_time'] }}</p>
+    {% endfor %}
+{% else %}
+    <p>You have no bookings for this room.</p>
+{% endif %}
+
 <a href="/">Back to Home</a>
 
 {% else %}
