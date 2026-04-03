@@ -271,12 +271,11 @@ async def filterBookings(request: Request):
     for room in room_collection.find():
         rooms.append(room)
 
-    # get all bookings for current user
     bookings = []
     for booking in booking_collection.find({'user_email': user_token['email']}):
         bookings.append(booking)
 
-    # get all bookings for that day across all rooms
+   
     filtered_bookings = []
     for booking in booking_collection.find({'date': date}):
         filtered_bookings.append(booking)
@@ -314,42 +313,82 @@ async def viewRoom(request: Request, room_name: str):
         my_bookings.append(booking)
     my_bookings.sort(key=lambda x: (x['date'], x['start_time']))
 
-    # calculate occupancy for next 5 days
+    # calculate occupancy, earliest free time and calendar for next 5 days
     from datetime import datetime, timedelta
     today = datetime.now().date()
     occupancy = []
+    earliest_free = []
+    calendar_data = []
 
     for i in range(5):
         day = today + timedelta(days=i)
         day_str = day.strftime('%Y-%m-%d')
 
-        #  09:00 to 18:00 = 540 minutes
         total_minutes = 540
         booked_minutes = 0
 
-        day_bookings = booking_collection.find({
+        day_bookings = list(booking_collection.find({
             'room_name': room_name,
             'date': day_str
-        })
+        }))
+        day_bookings.sort(key=lambda x: x['start_time'])
 
         for b in day_bookings:
-            # convert start and end time to minutes
             start_parts = b['start_time'].split(':')
             end_parts = b['end_time'].split(':')
             start_mins = int(start_parts[0]) * 60 + int(start_parts[1])
             end_mins = int(end_parts[0]) * 60 + int(end_parts[1])
-
-            
             start_mins = max(start_mins, 540)
             end_mins = min(end_mins, 1080)
-
             if end_mins > start_mins:
                 booked_minutes += end_mins - start_mins
 
         percentage = round((booked_minutes / total_minutes) * 100, 1)
-        occupancy.append({
+        occupancy.append({'date': day_str, 'percentage': percentage})
+
+        # find earliest free time
+        free_from = 540
+        for b in day_bookings:
+            start_parts = b['start_time'].split(':')
+            end_parts = b['end_time'].split(':')
+            start_mins = int(start_parts[0]) * 60 + int(start_parts[1])
+            end_mins = int(end_parts[0]) * 60 + int(end_parts[1])
+            if start_mins <= free_from:
+                free_from = max(free_from, end_mins)
+
+        if free_from < 1080:
+            free_hour = free_from // 60
+            free_min = free_from % 60
+            earliest_free.append({
+                'date': day_str,
+                'time': f'{free_hour:02d}:{free_min:02d}'
+            })
+        else:
+            earliest_free.append({
+                'date': day_str,
+                'time': 'No free time available'
+            })
+
+        # build calendar slots for this day
+        slots = []
+        for b in day_bookings:
+            start_parts = b['start_time'].split(':')
+            end_parts = b['end_time'].split(':')
+            start_mins = int(start_parts[0]) * 60 + int(start_parts[1])
+            end_mins = int(end_parts[0]) * 60 + int(end_parts[1])
+            # position from top: each minute = 1px, starting from 09:00
+            top = start_mins - 540
+            height = end_mins - start_mins
+            slots.append({
+                'start': b['start_time'],
+                'end': b['end_time'],
+                'top': max(top, 0),
+                'height': max(height, 10)
+            })
+
+        calendar_data.append({
             'date': day_str,
-            'percentage': percentage
+            'slots': slots
         })
 
     return templates.TemplateResponse('room.html', {
@@ -358,5 +397,7 @@ async def viewRoom(request: Request, room_name: str):
         'room_name': room_name,
         'bookings': bookings,
         'my_bookings': my_bookings,
-        'occupancy': occupancy
+        'occupancy': occupancy,
+        'earliest_free': earliest_free,
+        'calendar_data': calendar_data
     })

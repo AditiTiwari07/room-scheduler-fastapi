@@ -10,6 +10,43 @@
     <p>{{ day['date'] }}: {{ day['percentage'] }}% occupied</p>
 {% endfor %}
 
+<h3>Earliest Free Time for Next 5 Days</h3>
+{% for day in earliest_free %}
+    <p>{{ day['date'] }}: {{ day['time'] }}</p>
+{% endfor %}
+
+<h3>Calendar - Next 5 Days</h3>
+<div style="display:flex; gap:10px; flex-wrap:wrap;">
+{% for day in calendar_data %}
+    <div style="border:1px solid #ccc; padding:10px; min-width:150px; border-radius:8px;">
+        <strong>{{ day['date'] }}</strong>
+        <div style="position:relative; height:540px; background:#f9f9f9; margin-top:5px;">
+            {% for slot in day['slots'] %}
+            <div style="
+                position:absolute;
+                top:{{ slot['top'] }}px;
+                height:{{ slot['height'] }}px;
+                width:90%;
+                background:#4a90d9;
+                color:white;
+                font-size:11px;
+                padding:2px;
+                border-radius:4px;
+                overflow:hidden;">
+                {{ slot['start'] }}-{{ slot['end'] }}
+            </div>
+            {% endfor %}
+            <!-- Time labels -->
+            {% for hour in range(9, 18) %}
+            <div style="position:absolute; top:{{ (hour-9)*60 }}px; font-size:10px; color:#999;">
+                {{ hour }}:00
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+{% endfor %}
+</div>
+
 <h3>All Bookings for this Room</h3>
 {% if bookings %}
     {% for booking in bookings %}
