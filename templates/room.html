@@ -5,6 +5,11 @@
 {% if user_token %}
 <h2>Room: {{ room_name }}</h2>
 
+<h3>Occupancy for Next 5 Days</h3>
+{% for day in occupancy %}
+    <p>{{ day['date'] }}: {{ day['percentage'] }}% occupied</p>
+{% endfor %}
+
 <h3>All Bookings for this Room</h3>
 {% if bookings %}
     {% for booking in bookings %}

@@ -314,10 +314,49 @@ async def viewRoom(request: Request, room_name: str):
         my_bookings.append(booking)
     my_bookings.sort(key=lambda x: (x['date'], x['start_time']))
 
+    # calculate occupancy for next 5 days
+    from datetime import datetime, timedelta
+    today = datetime.now().date()
+    occupancy = []
+
+    for i in range(5):
+        day = today + timedelta(days=i)
+        day_str = day.strftime('%Y-%m-%d')
+
+        #  09:00 to 18:00 = 540 minutes
+        total_minutes = 540
+        booked_minutes = 0
+
+        day_bookings = booking_collection.find({
+            'room_name': room_name,
+            'date': day_str
+        })
+
+        for b in day_bookings:
+            # convert start and end time to minutes
+            start_parts = b['start_time'].split(':')
+            end_parts = b['end_time'].split(':')
+            start_mins = int(start_parts[0]) * 60 + int(start_parts[1])
+            end_mins = int(end_parts[0]) * 60 + int(end_parts[1])
+
+            
+            start_mins = max(start_mins, 540)
+            end_mins = min(end_mins, 1080)
+
+            if end_mins > start_mins:
+                booked_minutes += end_mins - start_mins
+
+        percentage = round((booked_minutes / total_minutes) * 100, 1)
+        occupancy.append({
+            'date': day_str,
+            'percentage': percentage
+        })
+
     return templates.TemplateResponse('room.html', {
         'request': request,
         'user_token': user_token,
         'room_name': room_name,
         'bookings': bookings,
-        'my_bookings': my_bookings
+        'my_bookings': my_bookings,
+        'occupancy': occupancy
     })
