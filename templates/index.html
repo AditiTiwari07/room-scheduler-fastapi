@@ -4,7 +4,13 @@
 
 {% if user_token %}
 
-<div class="section">
+{% if error_message %}
+<div style="background:#fde8e8; color:#c0392b; padding:12px 18px; border-radius:8px; margin-bottom:15px; border-left:4px solid #e74c3c;">
+    ⚠️ {{ error_message }}
+</div>
+{% endif %}
+
+<div class="card">
 <h2>➕ Add a New Room</h2>
 <form action="/add-room" method="post">
     <input type="text" name="room_name" placeholder="Enter room name" required/>
@@ -12,7 +18,7 @@
 </form>
 </div>
 
-<div class="section">
+<div class="card">
 <h2>🏠 Available Rooms</h2>
 {% if rooms %}
     {% for room in rooms %}
@@ -31,8 +37,9 @@
 {% endif %}
 </div>
 
-<div class="section">
+<div class="card">
 <h2>📅 Book a Room</h2>
+<p class="note">Select a room, date and time to make a booking.</p>
 <form action="/add-booking" method="post">
     <select name="room_name" required>
         {% for room in rooms %}
@@ -46,12 +53,12 @@
 </form>
 </div>
 
-<div class="section">
+<div class="card">
 <h2>📋 My Bookings</h2>
 {% if bookings %}
     {% for booking in bookings %}
         <div class="booking-card">
-            <span>🏠 {{ booking['room_name'] }} &nbsp;|&nbsp; 📅 {{ booking['date'] }} &nbsp;|&nbsp; 🕐 {{ booking['start_time'] }} - {{ booking['end_time'] }}</span>
+            <span>🏠 <strong>{{ booking['room_name'] }}</strong> &nbsp;|&nbsp; 📅 {{ booking['date'] }} &nbsp;|&nbsp; 🕐 {{ booking['start_time'] }} - {{ booking['end_time'] }}</span>
             <div>
                 <form action="/delete-booking" method="post" style="display:inline">
                     <input type="hidden" name="booking_id" value="{{ booking['_id'] }}"/>
@@ -62,12 +69,13 @@
         </div>
     {% endfor %}
 {% else %}
-    <p>No bookings yet.</p>
+    <p class="note">You have no bookings yet.</p>
 {% endif %}
 </div>
 
-<div class="section">
+<div class="card">
 <h2>🔍 Filter Bookings by Day</h2>
+<p class="note">View all room bookings for a specific day.</p>
 <form action="/filter-bookings" method="post">
     <input type="date" name="date" required/>
     <input type="submit" value="Filter"/>
@@ -77,19 +85,19 @@
 {% if filtered_bookings %}
     {% for booking in filtered_bookings %}
         <div class="booking-card">
-            <span>🏠 {{ booking['room_name'] }} &nbsp;|&nbsp; 🕐 {{ booking['start_time'] }} - {{ booking['end_time'] }} &nbsp;|&nbsp; 👤 {{ booking['user_email'] }}</span>
+            <span>🏠 <strong>{{ booking['room_name'] }}</strong> &nbsp;|&nbsp; 🕐 {{ booking['start_time'] }} - {{ booking['end_time'] }} &nbsp;|&nbsp; 👤 {{ booking['user_email'] }}</span>
         </div>
     {% endfor %}
 {% else %}
-    <p>No bookings found for that day.</p>
+    <p class="note">No bookings found for that day.</p>
 {% endif %}
 {% endif %}
 </div>
 
 {% else %}
-<div class="section">
+<div class="card">
 <h2>Welcome to Room Scheduler 🏢</h2>
-<p>Please login or sign up to manage rooms and bookings.</p>
+<p class="note">Please login or sign up using the form in the top right to manage rooms and bookings.</p>
 </div>
 {% endif %}
 

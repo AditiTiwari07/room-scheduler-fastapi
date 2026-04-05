@@ -27,13 +27,13 @@ except Exception as e:
 # Define the app
 app = FastAPI()
 
-# Open database and collections
+
 db = client['A1-3195197']
 room_collection = db['rooms']
 day_collection = db['days']
 booking_collection = db['bookings']
 
-# Firebase request adapter
+
 firebase_request_adapter = requests.Request()
 
 # Static files and templates
@@ -56,7 +56,7 @@ def validateFirebaseToken(id_token):
 @app.get('/', response_class=HTMLResponse)
 async def root(request: Request):
     id_token = request.cookies.get('token')
-    error_message = 'No error here'
+    error_message = request.query_params.get('error', '')
     user_token = None
 
     user_token = validateFirebaseToken(id_token)
@@ -66,7 +66,7 @@ async def root(request: Request):
     for room in room_collection.find():
         rooms.append(room)
 
-    # get all bookings for current user
+    
     bookings = []
     if user_token:
         for booking in booking_collection.find({'user_email': user_token['email']}):
@@ -94,7 +94,7 @@ async def addRoom(request: Request):
     # check if room already exists
     existing_room = room_collection.find_one({'name': room_name})
     if existing_room:
-        return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
+        return RedirectResponse('/?error=Room+already+exists', status_code=status.HTTP_302_FOUND)
 
     # add room to database
     room_collection.insert_one({
@@ -119,6 +119,10 @@ async def addBooking(request: Request):
     start_time = form['start_time']
     end_time = form['end_time']
 
+    
+    if end_time <= start_time:
+        return RedirectResponse('/?error=End+time+must+be+after+start+time', status_code=status.HTTP_302_FOUND)
+
     # check for clashing bookings
     existing_bookings = booking_collection.find({
         'room_name': room_name,
@@ -129,7 +133,7 @@ async def addBooking(request: Request):
         existing_start = existing['start_time']
         existing_end = existing['end_time']
         if not (end_time <= existing_start or start_time >= existing_end):
-            return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
+            return RedirectResponse('/?error=Room+already+booked+for+this+time', status_code=status.HTTP_302_FOUND)
 
     # add booking to database
     booking_collection.insert_one({
@@ -153,7 +157,6 @@ async def deleteBooking(request: Request):
     form = await request.form()
     booking_id = form['booking_id']
 
-    # only delete if this booking belongs to the current user
     booking = booking_collection.find_one({
         '_id': ObjectId(booking_id),
         'user_email': user_token['email']
@@ -200,11 +203,13 @@ async def editBookingPost(request: Request, booking_id: str):
     start_time = form['start_time']
     end_time = form['end_time']
 
-    # get current booking to know the room name
+    if end_time <= start_time:
+        return RedirectResponse('/?error=End+time+must+be+after+start+time', status_code=status.HTTP_302_FOUND)
+
+    
     booking = booking_collection.find_one({'_id': ObjectId(booking_id)})
     room_name = booking['room_name']
 
-    # check for clashing bookings excluding current booking
     existing_bookings = booking_collection.find({
         'room_name': room_name,
         'date': date,
@@ -215,7 +220,7 @@ async def editBookingPost(request: Request, booking_id: str):
         existing_start = existing['start_time']
         existing_end = existing['end_time']
         if not (end_time <= existing_start or start_time >= existing_end):
-            return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
+            return RedirectResponse('/?error=Room+already+booked+for+this+time', status_code=status.HTTP_302_FOUND)
 
     # update the booking
     booking_collection.update_one(
@@ -228,6 +233,8 @@ async def editBookingPost(request: Request, booking_id: str):
     )
 
     return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
+
+
 @app.post('/delete-room', response_class=RedirectResponse)
 async def deleteRoom(request: Request):
     id_token = request.cookies.get('token')
@@ -245,17 +252,19 @@ async def deleteRoom(request: Request):
     })
 
     if not room:
-        return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
+        return RedirectResponse('/?error=You+can+only+delete+rooms+you+created', status_code=status.HTTP_302_FOUND)
 
     # check if room has any bookings
     existing_bookings = booking_collection.find_one({'room_name': room_name})
     if existing_bookings:
-        return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
+        return RedirectResponse('/?error=Cannot+delete+room+with+existing+bookings', status_code=status.HTTP_302_FOUND)
 
     # delete the room
     room_collection.delete_one({'name': room_name})
 
     return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
+
+
 @app.post('/filter-bookings', response_class=HTMLResponse)
 async def filterBookings(request: Request):
     id_token = request.cookies.get('token')
@@ -275,7 +284,6 @@ async def filterBookings(request: Request):
     for booking in booking_collection.find({'user_email': user_token['email']}):
         bookings.append(booking)
 
-   
     filtered_bookings = []
     for booking in booking_collection.find({'date': date}):
         filtered_bookings.append(booking)
@@ -286,11 +294,13 @@ async def filterBookings(request: Request):
     return templates.TemplateResponse('index.html', {
         'request': request,
         'user_token': user_token,
-        'error_message': 'No error here',
+        'error_message': '',
         'rooms': rooms,
         'bookings': bookings,
         'filtered_bookings': filtered_bookings
     })
+
+
 @app.get('/room/{room_name}', response_class=HTMLResponse)
 async def viewRoom(request: Request, room_name: str):
     id_token = request.cookies.get('token')
@@ -298,13 +308,13 @@ async def viewRoom(request: Request, room_name: str):
     if not user_token:
         return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
 
-    # get all bookings for this room sorted by date and time
+ 
     bookings = []
     for booking in booking_collection.find({'room_name': room_name}):
         bookings.append(booking)
     bookings.sort(key=lambda x: (x['date'], x['start_time']))
 
-    # get bookings for this room by current user
+    
     my_bookings = []
     for booking in booking_collection.find({
         'room_name': room_name,
@@ -313,7 +323,7 @@ async def viewRoom(request: Request, room_name: str):
         my_bookings.append(booking)
     my_bookings.sort(key=lambda x: (x['date'], x['start_time']))
 
-    # calculate occupancy, earliest free time and calendar for next 5 days
+    
     from datetime import datetime, timedelta
     today = datetime.now().date()
     occupancy = []
@@ -376,7 +386,6 @@ async def viewRoom(request: Request, room_name: str):
             end_parts = b['end_time'].split(':')
             start_mins = int(start_parts[0]) * 60 + int(start_parts[1])
             end_mins = int(end_parts[0]) * 60 + int(end_parts[1])
-            # position from top: each minute = 1px, starting from 09:00
             top = start_mins - 540
             height = end_mins - start_mins
             slots.append({

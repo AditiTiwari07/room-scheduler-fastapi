@@ -9,20 +9,23 @@
 </head>
 <body>
     <nav>
-        <h1>Room Scheduler</h1>
-    </nav>
-    <div class="container">
-        <div id="login-box" hidden="true" class="login-box">
-            <h3>Login / Sign Up</h3>
-            Email:<input type="text" name="" id="email"/><br/>
-            Password:<input type="password" name="" id="password"/><br/>
-            <button id="login">Login</button>
-            <button id="sign-up">Sign Up</button>
+        <h1>🏢 Room Scheduler</h1>
+        <div>
+            <div id="login-box" hidden="true">
+                <input type="text" id="email" placeholder="Email"/>
+                <input type="password" id="password" placeholder="Password"/>
+                <button id="login">Login</button>
+                <button id="sign-up">Sign Up</button>
+            </div>
+            <button id="sign-out" hidden="true" class="delete-btn">Sign Out</button>
         </div>
-        <button id="sign-out" hidden="true" class="delete-btn">Sign out</button>
+    </nav>
 
+    <div class="container">
         {% if user_token %}
-            <p>Logged in as: <strong>{{ user_token.email }}</strong></p>
+        <div class="user-info">
+            <span>👤 Logged in as: <strong>{{ user_token.email }}</strong></span>
+        </div>
         {% endif %}
 
         {% block content %}{% endblock %}
