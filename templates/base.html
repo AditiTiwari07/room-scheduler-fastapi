@@ -12,16 +12,17 @@
         <h1>Room Scheduler</h1>
     </nav>
     <div class="container">
-        <div id="login-box" hidden="true">
+        <div id="login-box" hidden="true" class="login-box">
+            <h3>Login / Sign Up</h3>
             Email:<input type="text" name="" id="email"/><br/>
-            Password:<input type="password" name="" id="password"/>
+            Password:<input type="password" name="" id="password"/><br/>
             <button id="login">Login</button>
             <button id="sign-up">Sign Up</button>
         </div>
-        <button id="sign-out" hidden="true">Sign out</button>
+        <button id="sign-out" hidden="true" class="delete-btn">Sign out</button>
 
         {% if user_token %}
-            <p>User email: {{ user_token.email }}</p>
+            <p>Logged in as: <strong>{{ user_token.email }}</strong></p>
         {% endif %}
 
         {% block content %}{% endblock %}

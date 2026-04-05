@@ -34,6 +34,12 @@ h2 {
     color: #4a90d9;
 }
 
+h3 {
+    margin-top: 20px;
+    margin-bottom: 10px;
+    color: #333;
+}
+
 a {
     color: #4a90d9;
     text-decoration: none;
@@ -41,4 +47,114 @@ a {
 
 a:hover {
     text-decoration: underline;
+}
+
+input[type="text"],
+input[type="date"],
+input[type="time"],
+input[type="email"],
+input[type="password"],
+select {
+    padding: 8px;
+    margin: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+input[type="submit"],
+button {
+    padding: 8px 16px;
+    margin: 5px;
+    background-color: #4a90d9;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+input[type="submit"]:hover,
+button:hover {
+    background-color: #357abd;
+}
+
+.login-box {
+    background: #f9f9f9;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid #ddd;
+}
+
+.room-card {
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.booking-card {
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.delete-btn {
+    background-color: #e74c3c !important;
+}
+
+.delete-btn:hover {
+    background-color: #c0392b !important;
+}
+
+.edit-btn {
+    background-color: #27ae60 !important;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 4px;
+    text-decoration: none;
+}
+
+.edit-btn:hover {
+    background-color: #219a52 !important;
+    text-decoration: none;
+}
+
+.back-btn {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 8px 16px;
+    background-color: #4a90d9;
+    color: white;
+    border-radius: 4px;
+    text-decoration: none;
+}
+
+.back-btn:hover {
+    background-color: #357abd;
+    text-decoration: none;
+}
+
+.error-message {
+    color: #e74c3c;
+    padding: 10px;
+    background: #fde8e8;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+.section {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #eee;
 }

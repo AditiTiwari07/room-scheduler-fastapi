@@ -4,29 +4,35 @@
 
 {% if user_token %}
 
-<h2>Add a New Room</h2>
+<div class="section">
+<h2>➕ Add a New Room</h2>
 <form action="/add-room" method="post">
     <input type="text" name="room_name" placeholder="Enter room name" required/>
     <input type="submit" value="Add Room"/>
 </form>
+</div>
 
-<h2>Available Rooms</h2>
+<div class="section">
+<h2>🏠 Available Rooms</h2>
 {% if rooms %}
     {% for room in rooms %}
-        <p><a href="/room/{{ room['name'] }}">{{ room['name'] }}</a>
-        {% if room['created_by'] == user_token.email %}
-        <form action="/delete-room" method="post" style="display:inline">
-            <input type="hidden" name="room_name" value="{{ room['name'] }}"/>
-            <input type="submit" value="Delete Room"/>
-        </form>
-        {% endif %}
-        </p>
+        <div class="room-card">
+            <a href="/room/{{ room['name'] }}">📍 {{ room['name'] }}</a>
+            {% if room['created_by'] == user_token.email %}
+            <form action="/delete-room" method="post" style="display:inline">
+                <input type="hidden" name="room_name" value="{{ room['name'] }}"/>
+                <input type="submit" value="🗑 Delete Room" class="delete-btn"/>
+            </form>
+            {% endif %}
+        </div>
     {% endfor %}
 {% else %}
     <p>No rooms available yet.</p>
 {% endif %}
+</div>
 
-<h2>Book a Room</h2>
+<div class="section">
+<h2>📅 Book a Room</h2>
 <form action="/add-booking" method="post">
     <select name="room_name" required>
         {% for room in rooms %}
@@ -38,23 +44,30 @@
     <input type="time" name="end_time" required/>
     <input type="submit" value="Book Room"/>
 </form>
+</div>
 
-<h2>My Bookings</h2>
+<div class="section">
+<h2>📋 My Bookings</h2>
 {% if bookings %}
     {% for booking in bookings %}
-        <p>{{ booking['room_name'] }} - {{ booking['date'] }} - {{ booking['start_time'] }} to {{ booking['end_time'] }}
-        <form action="/delete-booking" method="post" style="display:inline">
-            <input type="hidden" name="booking_id" value="{{ booking['_id'] }}"/>
-            <input type="submit" value="Delete"/>
-        </form>
-        <a href="/edit-booking/{{ booking['_id'] }}">Edit</a>
-        </p>
+        <div class="booking-card">
+            <span>🏠 {{ booking['room_name'] }} &nbsp;|&nbsp; 📅 {{ booking['date'] }} &nbsp;|&nbsp; 🕐 {{ booking['start_time'] }} - {{ booking['end_time'] }}</span>
+            <div>
+                <form action="/delete-booking" method="post" style="display:inline">
+                    <input type="hidden" name="booking_id" value="{{ booking['_id'] }}"/>
+                    <input type="submit" value="🗑 Delete" class="delete-btn"/>
+                </form>
+                <a href="/edit-booking/{{ booking['_id'] }}" class="edit-btn">✏️ Edit</a>
+            </div>
+        </div>
     {% endfor %}
 {% else %}
     <p>No bookings yet.</p>
 {% endif %}
+</div>
 
-<h2>Filter Bookings by Day</h2>
+<div class="section">
+<h2>🔍 Filter Bookings by Day</h2>
 <form action="/filter-bookings" method="post">
     <input type="date" name="date" required/>
     <input type="submit" value="Filter"/>
@@ -63,16 +76,21 @@
 {% if filtered_bookings is defined %}
 {% if filtered_bookings %}
     {% for booking in filtered_bookings %}
-        <p>{{ booking['room_name'] }} - {{ booking['start_time'] }} to {{ booking['end_time'] }} - {{ booking['user_email'] }}</p>
+        <div class="booking-card">
+            <span>🏠 {{ booking['room_name'] }} &nbsp;|&nbsp; 🕐 {{ booking['start_time'] }} - {{ booking['end_time'] }} &nbsp;|&nbsp; 👤 {{ booking['user_email'] }}</span>
+        </div>
     {% endfor %}
 {% else %}
     <p>No bookings found for that day.</p>
 {% endif %}
 {% endif %}
+</div>
 
 {% else %}
-<h2>Welcome to Room Scheduler</h2>
-<p>Please login to manage rooms and bookings.</p>
+<div class="section">
+<h2>Welcome to Room Scheduler 🏢</h2>
+<p>Please login or sign up to manage rooms and bookings.</p>
+</div>
 {% endif %}
 
 {% endblock %}

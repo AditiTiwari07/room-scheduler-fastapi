@@ -3,69 +3,105 @@
 {% block content %}
 
 {% if user_token %}
-<h2>Room: {{ room_name }}</h2>
+<h2>🏠 Room: {{ room_name }}</h2>
 
-<h3>Occupancy for Next 5 Days</h3>
+<div class="section">
+<h3>📊 Occupancy for Next 5 Days</h3>
 {% for day in occupancy %}
-    <p>{{ day['date'] }}: {{ day['percentage'] }}% occupied</p>
+    <div class="booking-card">
+        <span>📅 {{ day['date'] }}</span>
+        <span style="color: {% if day['percentage'] > 75 %}red{% elif day['percentage'] > 40 %}orange{% else %}green{% endif %}">
+            {{ day['percentage'] }}% occupied
+        </span>
+    </div>
 {% endfor %}
+</div>
 
-<h3>Earliest Free Time for Next 5 Days</h3>
+<div class="section">
+<h3>⏰ Earliest Free Time for Next 5 Days</h3>
 {% for day in earliest_free %}
-    <p>{{ day['date'] }}: {{ day['time'] }}</p>
+    <div class="booking-card">
+        <span>📅 {{ day['date'] }}</span>
+        <span style="color: {% if day['time'] == 'No free time available' %}red{% else %}green{% endif %}">
+            {{ day['time'] }}
+        </span>
+    </div>
 {% endfor %}
+</div>
 
-<h3>Calendar - Next 5 Days</h3>
-<div style="display:flex; gap:10px; flex-wrap:wrap;">
+<div class="section">
+<h3>📅 Calendar - Next 5 Days</h3>
+<div style="display:flex; gap:15px; flex-wrap:wrap;">
 {% for day in calendar_data %}
-    <div style="border:1px solid #ccc; padding:10px; min-width:150px; border-radius:8px;">
-        <strong>{{ day['date'] }}</strong>
-        <div style="position:relative; height:540px; background:#f9f9f9; margin-top:5px;">
+    <div style="border:1px solid #ccc; padding:10px; min-width:160px; border-radius:8px; background:white;">
+        <strong style="color:#4a90d9;">{{ day['date'] }}</strong>
+        <div style="position:relative; height:540px; margin-top:5px;">
+
+            
+            <div style="position:absolute; top:0; left:0; width:100%; height:540px; background:#e8f5e9; border-radius:4px;"></div>
+
+            {% for hour in range(9, 19) %}
+            <div style="position:absolute; top:{{ (hour-9)*60 }}px; width:100%; border-top:1px solid #ccc; font-size:10px; color:#999; padding-left:2px;">
+                {{ hour }}:00
+            </div>
+            {% endfor %}
+
             {% for slot in day['slots'] %}
             <div style="
                 position:absolute;
                 top:{{ slot['top'] }}px;
                 height:{{ slot['height'] }}px;
-                width:90%;
-                background:#4a90d9;
+                width:85%;
+                left:30px;
+                background:#e74c3c;
                 color:white;
                 font-size:11px;
-                padding:2px;
+                padding:2px 4px;
                 border-radius:4px;
-                overflow:hidden;">
-                {{ slot['start'] }}-{{ slot['end'] }}
+                overflow:hidden;
+                z-index:1;">
+                🔴 {{ slot['start'] }}-{{ slot['end'] }}
             </div>
             {% endfor %}
-            <!-- Time labels -->
-            {% for hour in range(9, 18) %}
-            <div style="position:absolute; top:{{ (hour-9)*60 }}px; font-size:10px; color:#999;">
-                {{ hour }}:00
-            </div>
-            {% endfor %}
+
+        </div>
+        <div style="margin-top:5px; font-size:11px;">
+            <span style="color:#e74c3c;">🔴 Booked</span> &nbsp;
+            <span style="color:green;">🟢 Free</span>
         </div>
     </div>
 {% endfor %}
 </div>
+</div>
 
-<h3>All Bookings for this Room</h3>
+<div class="section">
+<h3>📋 All Bookings for this Room</h3>
 {% if bookings %}
     {% for booking in bookings %}
-        <p>{{ booking['date'] }} - {{ booking['start_time'] }} to {{ booking['end_time'] }} - {{ booking['user_email'] }}</p>
+        <div class="booking-card">
+            <span>📅 {{ booking['date'] }} &nbsp;|&nbsp; 🕐 {{ booking['start_time'] }} - {{ booking['end_time'] }}</span>
+            <span>👤 {{ booking['user_email'] }}</span>
+        </div>
     {% endfor %}
 {% else %}
     <p>No bookings for this room yet.</p>
 {% endif %}
+</div>
 
-<h3>My Bookings for this Room</h3>
+<div class="section">
+<h3>📋 My Bookings for this Room</h3>
 {% if my_bookings %}
     {% for booking in my_bookings %}
-        <p>{{ booking['date'] }} - {{ booking['start_time'] }} to {{ booking['end_time'] }}</p>
+        <div class="booking-card">
+            <span>📅 {{ booking['date'] }} &nbsp;|&nbsp; 🕐 {{ booking['start_time'] }} - {{ booking['end_time'] }}</span>
+        </div>
     {% endfor %}
 {% else %}
     <p>You have no bookings for this room.</p>
 {% endif %}
+</div>
 
-<a href="/">Back to Home</a>
+<a href="/" class="back-btn">⬅ Back to Home</a>
 
 {% else %}
 <p>Please login to view room details.</p>

@@ -4,17 +4,29 @@
 
 {% if user_token %}
 <h2>Edit Booking</h2>
-<form action="/edit-booking/{{ booking['_id'] }}" method="post">
-    <p>Room: {{ booking['room_name'] }}</p>
-    <label>Date:</label>
-    <input type="date" name="date" value="{{ booking['date'] }}" required/><br/>
-    <label>Start Time:</label>
-    <input type="time" name="start_time" value="{{ booking['start_time'] }}" required/><br/>
-    <label>End Time:</label>
-    <input type="time" name="end_time" value="{{ booking['end_time'] }}" required/><br/>
-    <input type="submit" value="Update"/>
-    <a href="/">Cancel</a>
-</form>
+
+<div class="section">
+    <form action="/edit-booking/{{ booking['_id'] }}" method="post">
+        <p><strong>Room:</strong> {{ booking['room_name'] }}</p>
+        <p>
+            <label>Date:</label>
+            <input type="date" name="date" value="{{ booking['date'] }}" required/>
+        </p>
+        <p>
+            <label>Start Time:</label>
+            <input type="time" name="start_time" value="{{ booking['start_time'] }}" required/>
+        </p>
+        <p>
+            <label>End Time:</label>
+            <input type="time" name="end_time" value="{{ booking['end_time'] }}" required/>
+        </p>
+        <input type="submit" value="Update Booking"/>
+        <a href="/" class="back-btn">Cancel</a>
+    </form>
+</div>
+
+{% else %}
+<p>Please login to edit bookings.</p>
 {% endif %}
 
 {% endblock %}
