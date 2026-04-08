@@ -51,16 +51,17 @@ def validateFirebaseToken(id_token):
     return user_token
 
 
-def getOrCreateDay(room_id, date_str):
-    # get existing day document
+def getOrCreateDay(room_id, room_name, date_str):
+    # get existing day document 
     day = day_collection.find_one({
-        'room_id': room_id,
+        'room_name': room_name,
         'date': date_str
     })
     if not day:
         # create new day document
         day_dict = {
             'room_id': room_id,
+            'room_name': room_name,
             'date': date_str,
             'booking_list': []
         }
@@ -153,7 +154,7 @@ async def addBooking(request: Request):
         return RedirectResponse('/?error=Room+not+found', status_code=status.HTTP_302_FOUND)
 
     # get or create day document
-    day = getOrCreateDay(room['_id'], date)
+    day = getOrCreateDay(room['_id'], room_name, date)
 
     # check for clashing bookings on this day
     for booking_id in day['booking_list']:
@@ -259,7 +260,7 @@ async def editBookingPost(request: Request, booking_id: str):
     room = room_collection.find_one({'name': room_name})
 
     # get or create day for new date
-    day = getOrCreateDay(room['_id'], date)
+    day = getOrCreateDay(room['_id'], room_name, date)
 
     # check for clashing bookings excluding current booking
     for bid in day['booking_list']:
