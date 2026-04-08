@@ -8,13 +8,10 @@ from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 from bson import ObjectId
 import starlette.status as status
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
+from datetime import datetime, timedelta
 
 # Connect to MongoDB
-uri = os.getenv("MONGO_URI")
+uri = "mongodb+srv://aditiuser:Shubh123@cluster0.6opbt4j.mongodb.net/room_scheduler?retryWrites=true&w=majority"
 client = MongoClient(uri, server_api=ServerApi('1'))
 
 # Ping to confirm connection
@@ -33,7 +30,7 @@ room_collection = db['rooms']
 day_collection = db['days']
 booking_collection = db['bookings']
 
-
+# Firebase request adapter
 firebase_request_adapter = requests.Request()
 
 # Static files and templates
@@ -42,6 +39,7 @@ templates = Jinja2Templates(directory='templates')
 
 
 def validateFirebaseToken(id_token):
+    # validate firebase token 
     if not id_token:
         return None
     user_token = None
@@ -53,8 +51,32 @@ def validateFirebaseToken(id_token):
     return user_token
 
 
+def getOrCreateDay(room_id, date_str):
+    # get existing day document
+    day = day_collection.find_one({
+        'room_id': room_id,
+        'date': date_str
+    })
+    if not day:
+        # create new day document
+        day_dict = {
+            'room_id': room_id,
+            'date': date_str,
+            'booking_list': []
+        }
+        result = day_collection.insert_one(day_dict)
+        # link day to room
+        room_collection.update_one(
+            {'_id': room_id},
+            {'$push': {'day_list': result.inserted_id}}
+        )
+        day = day_collection.find_one({'_id': result.inserted_id})
+    return day
+
+
 @app.get('/', response_class=HTMLResponse)
 async def root(request: Request):
+    
     id_token = request.cookies.get('token')
     error_message = request.query_params.get('error', '')
     user_token = None
@@ -66,7 +88,7 @@ async def root(request: Request):
     for room in room_collection.find():
         rooms.append(room)
 
-    
+    # get all bookings for current user
     bookings = []
     if user_token:
         for booking in booking_collection.find({'user_email': user_token['email']}):
@@ -83,6 +105,7 @@ async def root(request: Request):
 
 @app.post('/add-room', response_class=RedirectResponse)
 async def addRoom(request: Request):
+    # add a new room to the database
     id_token = request.cookies.get('token')
     user_token = validateFirebaseToken(id_token)
     if not user_token:
@@ -108,6 +131,7 @@ async def addRoom(request: Request):
 
 @app.post('/add-booking', response_class=RedirectResponse)
 async def addBooking(request: Request):
+   
     id_token = request.cookies.get('token')
     user_token = validateFirebaseToken(id_token)
     if not user_token:
@@ -119,36 +143,50 @@ async def addBooking(request: Request):
     start_time = form['start_time']
     end_time = form['end_time']
 
-    
+    # validate end time is after start time
     if end_time <= start_time:
         return RedirectResponse('/?error=End+time+must+be+after+start+time', status_code=status.HTTP_302_FOUND)
 
-    # check for clashing bookings
-    existing_bookings = booking_collection.find({
-        'room_name': room_name,
-        'date': date
-    })
+    # get the room
+    room = room_collection.find_one({'name': room_name})
+    if not room:
+        return RedirectResponse('/?error=Room+not+found', status_code=status.HTTP_302_FOUND)
 
-    for existing in existing_bookings:
-        existing_start = existing['start_time']
-        existing_end = existing['end_time']
-        if not (end_time <= existing_start or start_time >= existing_end):
-            return RedirectResponse('/?error=Room+already+booked+for+this+time', status_code=status.HTTP_302_FOUND)
+    # get or create day document
+    day = getOrCreateDay(room['_id'], date)
 
-    # add booking to database
-    booking_collection.insert_one({
+    # check for clashing bookings on this day
+    for booking_id in day['booking_list']:
+        existing = booking_collection.find_one({'_id': booking_id})
+        if existing:
+            existing_start = existing['start_time']
+            existing_end = existing['end_time']
+            if not (end_time <= existing_start or start_time >= existing_end):
+                return RedirectResponse('/?error=Room+already+booked+for+this+time', status_code=status.HTTP_302_FOUND)
+
+    # create booking document
+    booking_result = booking_collection.insert_one({
         'room_name': room_name,
+        'room_id': room['_id'],
+        'day_id': day['_id'],
         'date': date,
         'start_time': start_time,
         'end_time': end_time,
         'user_email': user_token['email']
     })
 
+    # link booking to day
+    day_collection.update_one(
+        {'_id': day['_id']},
+        {'$push': {'booking_list': booking_result.inserted_id}}
+    )
+
     return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
 
 
 @app.post('/delete-booking', response_class=RedirectResponse)
 async def deleteBooking(request: Request):
+    # delete a booking 
     id_token = request.cookies.get('token')
     user_token = validateFirebaseToken(id_token)
     if not user_token:
@@ -157,12 +195,19 @@ async def deleteBooking(request: Request):
     form = await request.form()
     booking_id = form['booking_id']
 
+    # only delete if this booking belongs to the current user
     booking = booking_collection.find_one({
         '_id': ObjectId(booking_id),
         'user_email': user_token['email']
     })
 
     if booking:
+        # remove booking from day's booking list
+        day_collection.update_one(
+            {'_id': booking['day_id']},
+            {'$pull': {'booking_list': booking['_id']}}
+        )
+        # delete the booking
         booking_collection.delete_one({'_id': ObjectId(booking_id)})
 
     return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
@@ -170,12 +215,12 @@ async def deleteBooking(request: Request):
 
 @app.get('/edit-booking/{booking_id}', response_class=HTMLResponse)
 async def editBooking(request: Request, booking_id: str):
+    
     id_token = request.cookies.get('token')
     user_token = validateFirebaseToken(id_token)
     if not user_token:
         return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
 
-    # get the booking
     booking = booking_collection.find_one({
         '_id': ObjectId(booking_id),
         'user_email': user_token['email']
@@ -193,6 +238,7 @@ async def editBooking(request: Request, booking_id: str):
 
 @app.post('/edit-booking/{booking_id}', response_class=RedirectResponse)
 async def editBookingPost(request: Request, booking_id: str):
+    # update a booking with new date and time
     id_token = request.cookies.get('token')
     user_token = validateFirebaseToken(id_token)
     if not user_token:
@@ -203,30 +249,47 @@ async def editBookingPost(request: Request, booking_id: str):
     start_time = form['start_time']
     end_time = form['end_time']
 
+    # validate end time is after start time
     if end_time <= start_time:
         return RedirectResponse('/?error=End+time+must+be+after+start+time', status_code=status.HTTP_302_FOUND)
 
-    
+    # get current booking
     booking = booking_collection.find_one({'_id': ObjectId(booking_id)})
     room_name = booking['room_name']
+    room = room_collection.find_one({'name': room_name})
 
-    existing_bookings = booking_collection.find({
-        'room_name': room_name,
-        'date': date,
-        '_id': {'$ne': ObjectId(booking_id)}
-    })
+    # get or create day for new date
+    day = getOrCreateDay(room['_id'], date)
 
-    for existing in existing_bookings:
-        existing_start = existing['start_time']
-        existing_end = existing['end_time']
-        if not (end_time <= existing_start or start_time >= existing_end):
-            return RedirectResponse('/?error=Room+already+booked+for+this+time', status_code=status.HTTP_302_FOUND)
+    # check for clashing bookings excluding current booking
+    for bid in day['booking_list']:
+        if bid == ObjectId(booking_id):
+            continue
+        existing = booking_collection.find_one({'_id': bid})
+        if existing:
+            existing_start = existing['start_time']
+            existing_end = existing['end_time']
+            if not (end_time <= existing_start or start_time >= existing_end):
+                return RedirectResponse('/?error=Room+already+booked+for+this+time', status_code=status.HTTP_302_FOUND)
+
+    # remove booking from old day
+    day_collection.update_one(
+        {'_id': booking['day_id']},
+        {'$pull': {'booking_list': ObjectId(booking_id)}}
+    )
+
+    # add booking to new day
+    day_collection.update_one(
+        {'_id': day['_id']},
+        {'$push': {'booking_list': ObjectId(booking_id)}}
+    )
 
     # update the booking
     booking_collection.update_one(
         {'_id': ObjectId(booking_id)},
         {'$set': {
             'date': date,
+            'day_id': day['_id'],
             'start_time': start_time,
             'end_time': end_time
         }}
@@ -237,6 +300,7 @@ async def editBookingPost(request: Request, booking_id: str):
 
 @app.post('/delete-room', response_class=RedirectResponse)
 async def deleteRoom(request: Request):
+    # delete a room 
     id_token = request.cookies.get('token')
     user_token = validateFirebaseToken(id_token)
     if not user_token:
@@ -259,6 +323,9 @@ async def deleteRoom(request: Request):
     if existing_bookings:
         return RedirectResponse('/?error=Cannot+delete+room+with+existing+bookings', status_code=status.HTTP_302_FOUND)
 
+    # delete all day documents for this room
+    day_collection.delete_many({'room_id': room['_id']})
+
     # delete the room
     room_collection.delete_one({'name': room_name})
 
@@ -267,6 +334,7 @@ async def deleteRoom(request: Request):
 
 @app.post('/filter-bookings', response_class=HTMLResponse)
 async def filterBookings(request: Request):
+   
     id_token = request.cookies.get('token')
     user_token = validateFirebaseToken(id_token)
     if not user_token:
@@ -275,7 +343,6 @@ async def filterBookings(request: Request):
     form = await request.form()
     date = form['date']
 
-    # get all rooms
     rooms = []
     for room in room_collection.find():
         rooms.append(room)
@@ -284,11 +351,11 @@ async def filterBookings(request: Request):
     for booking in booking_collection.find({'user_email': user_token['email']}):
         bookings.append(booking)
 
+    
     filtered_bookings = []
     for booking in booking_collection.find({'date': date}):
         filtered_bookings.append(booking)
 
-    # sort by start time
     filtered_bookings.sort(key=lambda x: x['start_time'])
 
     return templates.TemplateResponse('index.html', {
@@ -303,12 +370,13 @@ async def filterBookings(request: Request):
 
 @app.get('/room/{room_name}', response_class=HTMLResponse)
 async def viewRoom(request: Request, room_name: str):
+    
     id_token = request.cookies.get('token')
     user_token = validateFirebaseToken(id_token)
     if not user_token:
         return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
 
- 
+    
     bookings = []
     for booking in booking_collection.find({'room_name': room_name}):
         bookings.append(booking)
@@ -324,7 +392,6 @@ async def viewRoom(request: Request, room_name: str):
     my_bookings.sort(key=lambda x: (x['date'], x['start_time']))
 
     
-    from datetime import datetime, timedelta
     today = datetime.now().date()
     occupancy = []
     earliest_free = []
@@ -379,7 +446,7 @@ async def viewRoom(request: Request, room_name: str):
                 'time': 'No free time available'
             })
 
-        # build calendar slots for this day
+        # build calendar slots for day
         slots = []
         for b in day_bookings:
             start_parts = b['start_time'].split(':')
