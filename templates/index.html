@@ -74,6 +74,31 @@
 </div>
 
 <div class="card">
+<h2>🏠 My Bookings for a Specific Room</h2>
+<p class="note">Select a room to see your bookings for that room.</p>
+<form action="/my-room-bookings" method="post">
+    <select name="room_name" required>
+        {% for room in rooms %}
+            <option value="{{ room['name'] }}">{{ room['name'] }}</option>
+        {% endfor %}
+    </select>
+    <input type="submit" value="Show Bookings"/>
+</form>
+
+{% if room_bookings is defined %}
+{% if room_bookings %}
+    {% for booking in room_bookings %}
+        <div class="booking-card">
+            <span>📅 {{ booking['date'] }} &nbsp;|&nbsp; 🕐 {{ booking['start_time'] }} - {{ booking['end_time'] }}</span>
+        </div>
+    {% endfor %}
+{% else %}
+    <p class="note">You have no bookings for this room.</p>
+{% endif %}
+{% endif %}
+</div>
+
+<div class="card">
 <h2>🔍 Filter Bookings by Day</h2>
 <p class="note">View all room bookings for a specific day.</p>
 <form action="/filter-bookings" method="post">
