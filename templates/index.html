@@ -39,7 +39,7 @@
 
 <div class="card">
 <h2>📅 Book a Room</h2>
-<p class="note">Select a room, date and time to make a booking.</p>
+<p class="note">Select a room, date and time to make a booking.Bookings must be between 09:00 and 18:00</p>
 <form action="/add-booking" method="post">
     <select name="room_name" required>
         {% for room in rooms %}
@@ -90,6 +90,13 @@
     {% for booking in room_bookings %}
         <div class="booking-card">
             <span>📅 {{ booking['date'] }} &nbsp;|&nbsp; 🕐 {{ booking['start_time'] }} - {{ booking['end_time'] }}</span>
+            <div>
+                <form action="/delete-booking" method="post" style="display:inline">
+                    <input type="hidden" name="booking_id" value="{{ booking['_id'] }}"/>
+                    <input type="submit" value="🗑 Delete" class="delete-btn"/>
+                </form>
+                <a href="/edit-booking/{{ booking['_id'] }}" class="edit-btn">✏️ Edit</a>
+            </div>
         </div>
     {% endfor %}
 {% else %}

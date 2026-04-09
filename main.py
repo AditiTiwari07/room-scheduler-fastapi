@@ -138,7 +138,7 @@ async def addRoom(request: Request):
 
 @app.post('/add-booking', response_class=RedirectResponse)
 async def addBooking(request: Request):
-   
+    # add a new booking for a room on a specific day
     id_token = request.cookies.get('token')
     user_token = validateFirebaseToken(id_token)
     if not user_token:
@@ -154,22 +154,35 @@ async def addBooking(request: Request):
     if end_time <= start_time:
         return RedirectResponse('/?error=End+time+must+be+after+start+time', status_code=status.HTTP_302_FOUND)
 
+    # validate booking is between 09:00 and 18:00
+    if start_time < '09:00' or end_time > '18:00':
+        return RedirectResponse('/?error=Bookings+must+be+between+09:00+and+18:00', status_code=status.HTTP_302_FOUND)
+
+    # validate date is not in the past
+    from datetime import datetime
+    booking_date = datetime.strptime(date, '%Y-%m-%d').date()
+    if booking_date < datetime.now().date():
+        return RedirectResponse('/?error=Cannot+book+a+room+in+the+past', status_code=status.HTTP_302_FOUND)
+
     # get the room
     room = room_collection.find_one({'name': room_name})
     if not room:
         return RedirectResponse('/?error=Room+not+found', status_code=status.HTTP_302_FOUND)
 
-    # get or create day document
+    # get or create day document for this room and date
     day = getOrCreateDay(room['_id'], room_name, date)
 
     # check for clashing bookings on this day
-    for booking_id in day['booking_list']:
-        existing = booking_collection.find_one({'_id': booking_id})
-        if existing:
-            existing_start = existing['start_time']
-            existing_end = existing['end_time']
-            if not (end_time <= existing_start or start_time >= existing_end):
-                return RedirectResponse('/?error=Room+already+booked+for+this+time', status_code=status.HTTP_302_FOUND)
+    # check for clashing bookings on this day using direct query
+    existing_bookings = booking_collection.find({
+        'room_name': room_name,
+        'date': date
+    })
+    for existing in existing_bookings:
+        existing_start = existing['start_time']
+        existing_end = existing['end_time']
+        if not (end_time <= existing_start or start_time >= existing_end):
+            return RedirectResponse('/?error=Room+already+booked+for+this+time', status_code=status.HTTP_302_FOUND)
 
     # create booking document
     booking_result = booking_collection.insert_one({
@@ -260,24 +273,33 @@ async def editBookingPost(request: Request, booking_id: str):
     if end_time <= start_time:
         return RedirectResponse('/?error=End+time+must+be+after+start+time', status_code=status.HTTP_302_FOUND)
 
+    # validate booking is between 09:00 and 18:00
+    if start_time < '09:00' or end_time > '18:00':
+        return RedirectResponse('/?error=Bookings+must+be+between+09:00+and+18:00', status_code=status.HTTP_302_FOUND)
+
     # get current booking
     booking = booking_collection.find_one({'_id': ObjectId(booking_id)})
+    if not booking:
+        return RedirectResponse('/', status_code=status.HTTP_302_FOUND)
+
     room_name = booking['room_name']
     room = room_collection.find_one({'name': room_name})
 
+    # check for clashing bookings on the NEW date 
+    existing_bookings = booking_collection.find({
+        'room_name': room_name,
+        'date': date,
+        '_id': {'$ne': ObjectId(booking_id)}
+    })
+
+    for existing in existing_bookings:
+        existing_start = existing['start_time']
+        existing_end = existing['end_time']
+        if not (end_time <= existing_start or start_time >= existing_end):
+            return RedirectResponse('/?error=Room+already+booked+for+this+time', status_code=status.HTTP_302_FOUND)
+
     # get or create day for new date
     day = getOrCreateDay(room['_id'], room_name, date)
-
-    # check for clashing bookings excluding current booking
-    for bid in day['booking_list']:
-        if bid == ObjectId(booking_id):
-            continue
-        existing = booking_collection.find_one({'_id': bid})
-        if existing:
-            existing_start = existing['start_time']
-            existing_end = existing['end_time']
-            if not (end_time <= existing_start or start_time >= existing_end):
-                return RedirectResponse('/?error=Room+already+booked+for+this+time', status_code=status.HTTP_302_FOUND)
 
     # remove booking from old day
     day_collection.update_one(
