@@ -20,7 +20,7 @@ client = MongoClient(
     socketTimeoutMS=30000
 )
 
-# Ping to confirm connection
+# Ping to confirm connection and warm up database
 try:
     client.admin.command('ping')
     print("Successfully connected to MongoDB!")
@@ -30,11 +30,18 @@ except Exception as e:
 # Define the app
 app = FastAPI()
 
-
+# Open database and collections
 db = client['A1-3195197']
 room_collection = db['rooms']
 day_collection = db['days']
 booking_collection = db['bookings']
+
+# Warm up database
+try:
+    list(room_collection.find().limit(1))
+    print("Database warmed up!")
+except Exception as e:
+    print(e)
 
 # Firebase request adapter
 firebase_request_adapter = requests.Request()
