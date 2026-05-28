@@ -11,7 +11,10 @@ import starlette.status as status
 from datetime import datetime, timedelta
 
 # Connect to MongoDB
-uri = "mongodb+srv://aditiuser:Shubh123@cluster0.6opbt4j.mongodb.net/room_scheduler?retryWrites=true&w=majority"
+from dotenv import load_dotenv
+import os
+load_dotenv()
+uri = os.getenv("MONGO_URI")
 client = MongoClient(
     uri,
     server_api=ServerApi('1'),
